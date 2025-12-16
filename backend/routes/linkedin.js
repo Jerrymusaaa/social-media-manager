@@ -3,9 +3,9 @@ const router = express.Router();
 
 // Test route
 router.get('/test', (req, res) => {
-  res.json({ message: 'Posts route working' });
+  res.json({ message: 'LinkedIn route working' });
 });
 
-// TODO: Add post CRUD routes later
+// TODO: Add LinkedIn OAuth routes later
 
 module.exports = router;
