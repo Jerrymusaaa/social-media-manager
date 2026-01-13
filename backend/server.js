@@ -21,6 +21,7 @@ connectDB();
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/posts', require('./routes/posts'));
 app.use('/api/linkedin', require('./routes/linkedin'));
+app.use('/api/ai', require('./routes/ai'));
 
 // Basic route
 app.get('/', (req, res) => {
