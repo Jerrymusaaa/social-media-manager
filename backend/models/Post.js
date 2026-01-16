@@ -18,6 +18,10 @@ const postSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  images: {
+    type: [String],
+    default: []
+  },
   status: {
     type: String,
     enum: ['draft', 'scheduled', 'posted'],

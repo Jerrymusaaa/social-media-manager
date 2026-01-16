@@ -16,9 +16,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 300 * 1024 * 1024 }, // 300MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif/;
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
 
@@ -30,15 +30,21 @@ const upload = multer({
   }
 });
 
-// Create new post
+// Create new post (supports multiple images)
 exports.createPost = async (req, res) => {
   try {
     const { caption, userDescription, status, scheduledFor, platform } = req.body;
-    const image = req.file ? req.file.path : null;
+    const images = req.files ? req.files.map(file => file.path) : [];
 
-    if (!caption || !userDescription || !image) {
+    if (!caption || !userDescription || images.length === 0) {
       return res.status(400).json({ 
-        message: 'Please provide caption, description, and image' 
+        message: 'Please provide caption, description, and at least one image' 
+      });
+    }
+
+    if (images.length > 12) {
+      return res.status(400).json({ 
+        message: 'Maximum 12 images allowed per post' 
       });
     }
 
@@ -46,7 +52,8 @@ exports.createPost = async (req, res) => {
       user: req.userId,
       caption,
       userDescription,
-      image,
+      image: images[0], // Primary image (for backwards compatibility)
+      images: images,   // All images
       status: status || 'draft',
       scheduledFor: scheduledFor || null,
       platform: platform || 'linkedin'
@@ -63,6 +70,93 @@ exports.createPost = async (req, res) => {
     console.error('Create post error:', error);
     res.status(500).json({ 
       message: 'Error creating post', 
+      error: error.message 
+    });
+  }
+};
+
+// Update post (supports multiple images)
+exports.updatePost = async (req, res) => {
+  try {
+    const { caption, userDescription, status, scheduledFor, platform } = req.body;
+
+    const post = await Post.findOne({ 
+      _id: req.params.id, 
+      user: req.userId 
+    });
+
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Update fields if provided
+    if (caption) post.caption = caption;
+    if (userDescription) post.userDescription = userDescription;
+    if (status) post.status = status;
+    if (scheduledFor) post.scheduledFor = scheduledFor;
+    if (platform) post.platform = platform;
+
+    // If new images uploaded
+    if (req.files && req.files.length > 0) {
+      // Delete old images
+      if (post.images && post.images.length > 0) {
+        post.images.forEach(imagePath => {
+          if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+          }
+        });
+      }
+      
+      const newImages = req.files.map(file => file.path);
+      post.images = newImages;
+      post.image = newImages[0]; // Update primary image
+    }
+
+    await post.save();
+
+    res.json({
+      message: 'Post updated successfully',
+      post
+    });
+
+  } catch (error) {
+    console.error('Update post error:', error);
+    res.status(500).json({ 
+      message: 'Error updating post', 
+      error: error.message 
+    });
+  }
+};
+
+// Delete post
+exports.deletePost = async (req, res) => {
+  try {
+    const post = await Post.findOne({ 
+      _id: req.params.id, 
+      user: req.userId 
+    });
+
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Delete all image files
+    if (post.images && post.images.length > 0) {
+      post.images.forEach(imagePath => {
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      });
+    }
+
+    await Post.deleteOne({ _id: req.params.id });
+
+    res.json({ message: 'Post deleted successfully' });
+
+  } catch (error) {
+    console.error('Delete post error:', error);
+    res.status(500).json({ 
+      message: 'Error deleting post', 
       error: error.message 
     });
   }
@@ -117,82 +211,6 @@ exports.getPost = async (req, res) => {
     console.error('Get post error:', error);
     res.status(500).json({ 
       message: 'Error fetching post', 
-      error: error.message 
-    });
-  }
-};
-
-// Update post
-exports.updatePost = async (req, res) => {
-  try {
-    const { caption, userDescription, status, scheduledFor, platform } = req.body;
-
-    const post = await Post.findOne({ 
-      _id: req.params.id, 
-      user: req.userId 
-    });
-
-    if (!post) {
-      return res.status(404).json({ message: 'Post not found' });
-    }
-
-    // Update fields if provided
-    if (caption) post.caption = caption;
-    if (userDescription) post.userDescription = userDescription;
-    if (status) post.status = status;
-    if (scheduledFor) post.scheduledFor = scheduledFor;
-    if (platform) post.platform = platform;
-
-    // If new image uploaded
-    if (req.file) {
-      // Delete old image
-      if (post.image && fs.existsSync(post.image)) {
-        fs.unlinkSync(post.image);
-      }
-      post.image = req.file.path;
-    }
-
-    await post.save();
-
-    res.json({
-      message: 'Post updated successfully',
-      post
-    });
-
-  } catch (error) {
-    console.error('Update post error:', error);
-    res.status(500).json({ 
-      message: 'Error updating post', 
-      error: error.message 
-    });
-  }
-};
-
-// Delete post
-exports.deletePost = async (req, res) => {
-  try {
-    const post = await Post.findOne({ 
-      _id: req.params.id, 
-      user: req.userId 
-    });
-
-    if (!post) {
-      return res.status(404).json({ message: 'Post not found' });
-    }
-
-    // Delete image file
-    if (post.image && fs.existsSync(post.image)) {
-      fs.unlinkSync(post.image);
-    }
-
-    await Post.deleteOne({ _id: req.params.id });
-
-    res.json({ message: 'Post deleted successfully' });
-
-  } catch (error) {
-    console.error('Delete post error:', error);
-    res.status(500).json({ 
-      message: 'Error deleting post', 
       error: error.message 
     });
   }
