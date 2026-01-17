@@ -21,4 +21,7 @@ router.put('/:id', auth, postController.upload.array('images', 12), postControll
 // Delete post
 router.delete('/:id', auth, postController.deletePost);
 
+// Get scheduled posts
+router.get('/scheduled', auth, postController.getScheduledPosts);
+
 module.exports = router;

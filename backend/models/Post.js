@@ -14,9 +14,21 @@ const postSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // Media files (images and videos)
+  media: {
+    type: [{
+      type: String, // file path
+      mediaType: {
+        type: String,
+        enum: ['image', 'video'],
+        default: 'image'
+      }
+    }],
+    default: []
+  },
+  // Backwards compatibility
   image: {
-    type: String,
-    required: true
+    type: String
   },
   images: {
     type: [String],
@@ -24,7 +36,7 @@ const postSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['draft', 'scheduled', 'posted'],
+    enum: ['draft', 'scheduled', 'posted', 'failed'],
     default: 'draft'
   },
   scheduledFor: {
@@ -37,18 +49,29 @@ const postSchema = new mongoose.Schema({
   },
   platform: {
     type: String,
-    enum: ['linkedin', 'twitter', 'instagram'],
-    default: 'linkedin'
+    enum: ['linkedin', 'twitter', 'instagram', 'tiktok', 'reddit'],
+    required: true
   },
-  linkedinPostId: {
-    type: String,
-    default: null
+  // Platform-specific post IDs
+  platformPostIds: {
+    linkedin: { type: String, default: null },
+    twitter: { type: String, default: null },
+    instagram: { type: String, default: null },
+    tiktok: { type: String, default: null },
+    reddit: { type: String, default: null }
+  },
+  // Cross-posting
+  crossPost: {
+    enabled: { type: Boolean, default: false },
+    platforms: [{ type: String, enum: ['linkedin', 'twitter', 'instagram', 'tiktok', 'reddit'] }]
   },
   analytics: {
     likes: { type: Number, default: 0 },
     comments: { type: Number, default: 0 },
     shares: { type: Number, default: 0 },
-    impressions: { type: Number, default: 0 }
+    impressions: { type: Number, default: 0 },
+    views: { type: Number, default: 0 }, // For video content
+    engagement: { type: Number, default: 0 }
   }
 }, {
   timestamps: true
