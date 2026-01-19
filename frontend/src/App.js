@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import CreatePost from './pages/CreatePost';
 import Drafts from './pages/Drafts';
+import Scheduled from './pages/Scheduled';
 import Analytics from './pages/Analytics';
 
 function App() {
@@ -41,11 +42,15 @@ function App() {
         />
         <Route 
           path="/drafts" 
-          element={token ? <Drafts /> : <Navigate to="/login" />} 
+          element={token ? <Drafts onLogout={handleLogout} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/scheduled" 
+          element={token ? <Scheduled onLogout={handleLogout} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/analytics" 
-          element={token ? <Analytics /> : <Navigate to="/login" />} 
+          element={token ? <Analytics onLogout={handleLogout} /> : <Navigate to="/login" />} 
         />
         <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
       </Routes>
